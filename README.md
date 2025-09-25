@@ -314,8 +314,8 @@ python app.py
 
 ## 🌐 Links do Projeto
 
-- **📁 Repositório GitHub**: [Link para o repositório]
-- **🚀 Aplicação Deploy**: [Link da aplicação hospedada]
+- **📁 Repositório GitHub**: https://github.com/HayJM/autou-email-app
+- **🚀 Aplicação Deploy**: [Configurar após deploy - Ver guia acima]
 - **🎥 Vídeo Demo**: [Link do YouTube com acesso liberado]
 
 ---
