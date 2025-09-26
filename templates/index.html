@@ -1,65 +1,245 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="h-full">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AutoU — Classificador de E-mails</title>
-<script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AutoU — Classificador de E-mails</title>
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f5f3ff', 100: '#ede9fe', 200: '#ddd6fe', 300: '#c4b5fd', 400: '#a78bfa',
+              500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9', 800: '#5b21b6', 900: '#4c1d95'
+            }
+          },
+          boxShadow: {
+            soft: '0 10px 30px -10px rgba(0,0,0,0.2)'
+          }
+        }
+      },
+      darkMode: 'class'
+    }
+  </script>
+
+  <!-- Font & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
-<body class="bg-gray-50 min-h-screen">
-<div class="max-w-3xl mx-auto py-10 px-4">
-<h1 class="text-3xl font-bold tracking-tight mb-2">AutoU — Classificador de E-mails</h1>
-<p class="text-gray-600 mb-8">Cole o conteúdo do e-mail ou envie um arquivo <code>.txt</code>/<code>.pdf</code> para classificar e sugerir uma resposta automática.</p>
+<body class="app-bg bg-gray-50 dark:bg-gray-950 min-h-screen">
 
+  <!-- Top bar -->
+  <header class="relative z-10 border-b border-white/60 dark:border-white/5 backdrop-blur bg-white/70 dark:bg-gray-900/60">
+    <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-xl bg-brand-600 text-white grid place-content-center shadow-soft">
+          <i data-lucide="mail"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-semibold tracking-tight text-gray-900 dark:text-white">AutoU — Classificador de E-mails</h1>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Cole o e-mail ou envie um .txt/.pdf para classificar e sugerir resposta</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="themeToggle" type="button" class="inline-flex items-center gap-2 text-sm px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200">
+          <i data-lucide="moon"></i><span>Modo</span>
+        </button>
+      </div>
+    </div>
+  </header>
 
-<form action="/process" method="post" enctype="multipart/form-data" class="bg-white p-6 rounded-2xl shadow">
-<label class="block text-sm font-medium text-gray-700 mb-2">Texto do e-mail</label>
-<textarea name="email_text" rows="8" class="w-full rounded-xl border-gray-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 p-3" placeholder="Cole aqui o conteúdo do e‑mail..."></textarea>
+  <main class="relative z-10 max-w-5xl mx-auto px-4 py-8">
+    <!-- Card principal -->
+    <form id="emailForm" action="/process" method="post" enctype="multipart/form-data" class="bg-white dark:bg-gray-900/70 backdrop-blur rounded-2xl shadow-soft border border-white/60 dark:border-white/10 p-6">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Coluna esquerda: texto -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Texto do e-mail</label>
+          <div class="relative">
+            <textarea id="email_text" name="email_text" rows="10" class="w-full rounded-xl border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 p-4" placeholder="Ex.: Bom dia! Poderiam informar o andamento do chamado #12345? Preciso da previsão."></textarea>
+            <div class="absolute bottom-2 right-3 text-xs text-gray-400" id="charCount">0 caracteres</div>
+          </div>
+          <!-- chips de exemplos -->
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button type="button" data-sample="Bom dia! Poderiam informar o andamento do chamado #12345? Preciso da previsão." class="sample px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs hover:bg-gray-200 dark:hover:bg-gray-700">Exemplo: Status</button>
+            <button type="button" data-sample="Segue anexo o documento solicitado para validação." class="sample px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs hover:bg-gray-200 dark:hover:bg-gray-700">Exemplo: Anexo</button>
+            <button type="button" data-sample="Feliz aniversário e parabéns pelo excelente trabalho!" class="sample px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 text-xs hover:bg-gray-200 dark:hover:bg-gray-700">Exemplo: Felicitações</button>
+            <button type="button" id="pasteBtn" class="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-1"><i data-lucide="clipboard"></i>Colar da área de transferência</button>
+          </div>
+        </div>
 
+        <!-- Coluna direita: upload -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Upload (.txt ou .pdf)</label>
+          <div id="dropzone" class="group relative rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-brand-400 transition p-6 grid place-content-center text-center bg-gray-50/60 dark:bg-gray-950/40">
+            <div class="pointer-events-none flex flex-col items-center gap-2">
+              <i data-lucide="file-up" class="text-gray-400 group-hover:text-brand-500"></i>
+              <p class="text-sm text-gray-600 dark:text-gray-300">Arraste e solte aqui
+                <span class="block text-xs text-gray-400">ou</span>
+                <span class="text-brand-700 dark:text-brand-400 font-medium">clique para selecionar</span>
+              </p>
+              <p id="fileName" class="text-xs text-gray-400"></p>
+            </div>
+            <input id="fileInput" type="file" name="file" accept=".txt,.pdf" class="absolute inset-0 opacity-0 cursor-pointer" />
+          </div>
+          <p class="mt-2 text-xs text-gray-400">Máx. 10MB. Apenas .txt e .pdf</p>
 
-<div class="my-4 text-center text-gray-500">ou</div>
+          <div class="mt-6 flex items-center gap-3">
+            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 shadow">
+              <i data-lucide="sparkles"></i> Processar
+            </button>
+            <button type="button" id="clearBtn" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800">
+              <i data-lucide="eraser"></i> Limpar
+            </button>
+          </div>
+        </div>
+      </div>
 
+      {% if error %}
+        <div class="mt-6 p-4 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 rounded-xl border border-red-200 dark:border-red-900 flex items-start gap-2">
+          <i data-lucide="alert-triangle"></i>
+          <div>{{ error }}</div>
+        </div>
+      {% endif %}
+    </form>
 
-<label class="block text-sm font-medium text-gray-700 mb-2">Upload de arquivo (.txt ou .pdf)</label>
-<input type="file" name="file" accept=".txt,.pdf" class="mb-6" />
+    {% if category %}
+    <section class="mt-8 grid lg:grid-cols-3 gap-6">
+      <!-- Resultado -->
+      <div class="lg:col-span-1 bg-white dark:bg-gray-900/70 backdrop-blur rounded-2xl shadow-soft border border-white/60 dark:border-white/10 p-6">
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Resultado</h2>
+        <dl class="grid grid-cols-2 gap-4">
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400 text-sm">Categoria</dt>
+            <dd class="mt-1">
+              {% if category == 'Produtivo' %}
+                <span class="inline-flex items-center gap-2 text-sm px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300"><i data-lucide='check-circle'></i>{{ category }}</span>
+              {% else %}
+                <span class="inline-flex items-center gap-2 text-sm px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300"><i data-lucide='sparkles'></i>{{ category }}</span>
+              {% endif %}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400 text-sm">Confiança</dt>
+            <dd class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{{ confidence }}</dd>
+          </div>
+          <div>
+            <dt class="text-gray-500 dark:text-gray-400 text-sm">Sub-intenção</dt>
+            <dd class="mt-1 text-sm font-medium text-gray-900 dark:text-gray-100">{{ sub_intent or '—' }}</dd>
+          </div>
+          <div class="col-span-2">
+            <dt class="text-gray-500 dark:text-gray-400 text-sm mb-2">Indicador de confiança</dt>
+            <div class="w-full h-2 rounded-full bg-gray-200 dark:bg-gray-800">
+              <div class="h-2 rounded-full bg-brand-600" data-pct="{{ confidence|replace('%','') }}"></div>
+            </div>
+          </div>
+        </dl>
+        {% if signals %}
+          <div class="mt-4 text-xs text-gray-500 dark:text-gray-400">Sinais: {{ ', '.join(signals) }}</div>
+        {% endif %}
+      </div>
 
+      <!-- Resposta sugerida -->
+      <div class="lg:col-span-2 bg-white dark:bg-gray-900/70 backdrop-blur rounded-2xl shadow-soft border border-white/60 dark:border-white/10 p-6">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Resposta sugerida</h2>
+          <button id="copyBtn" type="button" class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200">
+            <i data-lucide="copy"></i> Copiar
+          </button>
+        </div>
+        <pre id="replyBlock" class="whitespace-pre-wrap text-gray-800 dark:text-gray-100 bg-gray-50 dark:bg-gray-950/40 p-4 rounded-xl border border-gray-200 dark:border-gray-800">{{ reply }}</pre>
+      </div>
+    </section>
 
-<button type="submit" class="inline-flex items-center px-4 py-2 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow">Processar</button>
-</form>
+    <details class="mt-6 bg-white dark:bg-gray-900/70 backdrop-blur rounded-2xl shadow-soft border border-white/60 dark:border-white/10 p-6">
+      <summary class="cursor-pointer text-sm text-gray-600 dark:text-gray-300">Texto analisado</summary>
+      <pre class="mt-3 whitespace-pre-wrap text-gray-600 dark:text-gray-300">{{ input_text }}</pre>
+    </details>
+    {% endif %}
+  </main>
 
+  <!-- Loading overlay -->
+  <div id="loading" class="hidden fixed inset-0 z-50 bg-white/70 dark:bg-black/50 backdrop-blur grid place-content-center">
+    <div class="flex items-center gap-3 text-gray-700 dark:text-gray-200">
+      <svg class="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+      Processando…
+    </div>
+  </div>
 
-{% if error %}
-<div class="mt-6 p-4 bg-red-50 text-red-700 rounded-xl">{{ error }}</div>
-{% endif %}
+  <footer class="relative z-10 py-8 text-center text-xs text-gray-400">
+    <p>AutoU • MVP de classificação e resposta automática de e-mails</p>
+  </footer>
 
+  <script>
+    // ícones
+    lucide.createIcons();
 
-{% if category %}
-<div class="mt-8 space-y-6">
-<div class="bg-white p-6 rounded-2xl shadow">
-<h2 class="text-xl font-semibold mb-2">Resultado</h2>
-<dl class="grid grid-cols-1 md:grid-cols-3 gap-4">
-<div><dt class="text-gray-500">Categoria</dt><dd class="text-lg font-medium">{{ category }}</dd></div>
-<div><dt class="text-gray-500">Confiança</dt><dd class="text-lg font-medium">{{ confidence }}</dd></div>
-<div><dt class="text-gray-500">Sub-intenção</dt><dd class="text-lg font-medium">{{ sub_intent or '—' }}</dd></div>
-</dl>
-{% if signals %}
-<div class="mt-3 text-sm text-gray-500">Sinais: {{ ', '.join(signals) }}</div>
-{% endif %}
-</div>
+    // tema (dark/light)
+    const themeToggle = document.getElementById('themeToggle');
+    const html = document.documentElement;
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') html.classList.add('dark');
+    themeToggle?.addEventListener('click', () => {
+      html.classList.toggle('dark');
+      localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
+    });
 
+    // contador de caracteres
+    const ta = document.getElementById('email_text');
+    const count = document.getElementById('charCount');
+    const updateCount = () => { count.textContent = (ta.value.length || 0) + ' caracteres'; };
+    ta?.addEventListener('input', updateCount); updateCount();
 
-<div class="bg-white p-6 rounded-2xl shadow">
-<h2 class="text-xl font-semibold mb-2">Resposta sugerida</h2>
-<pre class="whitespace-pre-wrap text-gray-800">{{ reply }}</pre>
-</div>
+    // exemplos rápidos
+    for (const b of document.querySelectorAll('.sample')) {
+      b.addEventListener('click', () => { ta.value = b.dataset.sample; ta.focus(); updateCount(); });
+    }
 
+    // colar da área de transferência
+    document.getElementById('pasteBtn')?.addEventListener('click', async () => {
+      try { const txt = await navigator.clipboard.readText(); ta.value = txt; updateCount(); ta.focus(); }
+      catch { alert('Permita acesso à área de transferência para usar este recurso.'); }
+    });
 
-<details class="bg-white p-6 rounded-2xl shadow">
-<summary class="cursor-pointer text-sm text-gray-600">Texto analisado</summary>
-<pre class="mt-3 whitespace-pre-wrap text-gray-500">{{ input_text }}</pre>
-</details>
-</div>
-{% endif %}
-</div>
+    // drag & drop + exibir nome do arquivo
+    const dz = document.getElementById('dropzone');
+    const fi = document.getElementById('fileInput');
+    const fn = document.getElementById('fileName');
+    fi?.addEventListener('change', () => { fn.textContent = fi.files?.[0]?.name || ''; });
+    dz?.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('ring-2','ring-brand-400');});
+    dz?.addEventListener('dragleave', () => dz.classList.remove('ring-2','ring-brand-400'));
+    dz?.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('ring-2','ring-brand-400'); fi.files = e.dataTransfer.files; fn.textContent = fi.files?.[0]?.name || ''; });
+
+    // copiar resposta
+    const copyBtn = document.getElementById('copyBtn');
+    copyBtn?.addEventListener('click', async () => {
+      const text = document.getElementById('replyBlock')?.innerText || '';
+      try { await navigator.clipboard.writeText(text); copyBtn.innerHTML = '<i data-lucide="check"></i> Copiado'; lucide.createIcons(); setTimeout(() => { copyBtn.innerHTML = '<i data-lucide="copy"></i> Copiar'; lucide.createIcons();}, 1600);} catch { alert('Não foi possível copiar.'); }
+    });
+
+    // loading overlay ao enviar o form
+    const form = document.getElementById('emailForm');
+    form?.addEventListener('submit', () => {
+      document.getElementById('loading')?.classList.remove('hidden');
+    });
+
+    // Ajusta barras de confiança (evita Jinja dentro de style inline)
+    function setConfidenceBars() {
+      document.querySelectorAll('[data-pct]').forEach(el => {
+        const v = parseFloat(el.getAttribute('data-pct') || '0');
+        el.style.width = (isFinite(v) ? v : 0) + '%';
+      });
+    }
+    setConfidenceBars();
+  </script>
 </body>
 </html>
