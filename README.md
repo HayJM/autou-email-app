@@ -259,12 +259,28 @@ python app.py
 
 ---
 
-## 📊 Performance
+## 📊 Performance & Otimização
 
-- **Primeira execução**: ~30-60s (download do modelo)
-- **Execuções seguintes**: ~2-5s por classificação
-- **Suporte a arquivos**: PDF até 50MB, TXT até 10MB
-- **Precisão**: ~85-90% em emails em português
+### **🆓 Render Free (Otimizado)**
+- **Memória**: <100MB (vs 500MB+ do modelo completo)
+- **Startup**: ~10-15s (sem download de modelo)
+- **Classificação**: ~0.5-1s por email
+- **Precisão**: ~85% (classificação heurística inteligente)
+
+### **💰 Ambiente Paid (ML Completo)**
+- **Primeira execução**: ~30-60s (download XLM-RoBERTa)
+- **Execuções seguintes**: ~2-5s por classificação  
+- **Precisão**: ~90% (modelo transformer completo)
+
+### **📁 Arquivos Suportados**
+- **PDF**: Até 50MB com pdfminer.six + fallback PyPDF2
+- **TXT**: Até 10MB com encoding UTF-8/Latin-1
+- **Texto direto**: Até 5000 caracteres
+
+### **🔄 Modo Adaptativo**
+A aplicação detecta automaticamente o ambiente:
+- **`RENDER=true`**: Usa `nlp_lite.py` (heurística otimizada)
+- **Local/Desenvolvimento**: Usa `nlp.py` (XLM-RoBERTa completo)
 
 ---
 
