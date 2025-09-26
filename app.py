@@ -2,8 +2,19 @@ import os
 import io
 from flask import Flask, render_template, request
 from werkzeug.utils import secure_filename
-from nlp import extract_text_from_file, classify_email
 from responders import suggest_reply
+
+# Usar versão leve em produção (Render/Heroku)
+if os.getenv('RENDER') or os.getenv('DYNO'):
+    print("🚀 Modo produção detectado - usando NLP otimizado")
+    from nlp_lite import extract_text_from_file, classify_email
+else:
+    print("🔬 Modo desenvolvimento - usando NLP completo")
+    try:
+        from nlp import extract_text_from_file, classify_email
+    except ImportError:
+        print("⚠️  Fallback para NLP lite")
+        from nlp_lite import extract_text_from_file, classify_email
 
 
 ALLOWED_EXTENSIONS = {"txt", "pdf"}

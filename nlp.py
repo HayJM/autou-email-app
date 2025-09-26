@@ -17,7 +17,7 @@ SUB_INTENT_PATTERNS = {
 }
 
 
-# Zero-shot local com transformers (multilíngue)
+# Zero-shot local com transformers (otimizado para memória baixa)
 _CACHE_PIPELINE = None
 
 
@@ -27,8 +27,19 @@ def _get_zero_shot_pipeline():
         return _CACHE_PIPELINE
     try:
         from transformers import pipeline
-        model = os.getenv('ZSC_MODEL', 'joeddav/xlm-roberta-large-xnli')
-        _CACHE_PIPELINE = pipeline('zero-shot-classification', model=model)
+        import torch
+        
+        # Usar modelo menor e mais eficiente para deploy gratuito
+        model = os.getenv('ZSC_MODEL', 'facebook/bart-large-mnli')
+        
+        # Configurações para otimizar memória
+        _CACHE_PIPELINE = pipeline(
+            'zero-shot-classification', 
+            model=model,
+            device=-1,  # Forçar CPU
+            torch_dtype=torch.float32,  # Precisão padrão
+            model_kwargs={'low_cpu_mem_usage': True}
+        )
         return _CACHE_PIPELINE
     except Exception:
         return None
@@ -80,21 +91,33 @@ def classify_email(text: str) -> Dict:
     raw = normalize_text(text)
     pre = preprocess(raw)
 
+    # Verificar se está em ambiente com pouca memória (Render Free)
+    if os.getenv('RENDER') or len(text) > 1000:
+        print("Usando classificação heurística (ambiente otimizado)")
+        category, conf = heuristic_classifier(pre)
+        return {
+            'category': category,
+            'confidence': conf,
+            'method': 'heuristic'
+        }
 
-# Tenta zero-shot
+    # Tenta zero-shot com configurações otimizadas
     zsc = _get_zero_shot_pipeline()
-    labels = ["suporte técnico", "conversa social"]  # Labels mais específicos
+    labels = ["technical support", "social conversation"]  # Labels em inglês para BART
     if zsc is not None:
         try:
-            res = zsc(raw, candidate_labels=labels)  # Usar texto original, não preprocessado
+            # Truncar texto para economizar memória
+            text_truncated = raw[:300]
+            res = zsc(text_truncated, candidate_labels=labels)
             if isinstance(res, list):
                 res = res[0]
             scores = dict(zip(res["labels"], res["scores"]))
             top_label = max(scores, key=scores.get)
             conf = float(scores[top_label])
             # Mapear de volta para os labels originais
-            category = "Produtivo" if top_label == "suporte técnico" else "Improdutivo"
-        except Exception:
+            category = "Produtivo" if top_label == "technical support" else "Improdutivo"
+        except Exception as e:
+            print(f"Fallback para heurística: {e}")
             category, conf = heuristic_classifier(pre)
     else:
         category, conf = heuristic_classifier(pre)
