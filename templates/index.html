@@ -112,7 +112,115 @@
       {% endif %}
     </form>
 
-    {% if category %}
+    {% if is_multiple and multiple_emails %}
+    <!-- Múltiplos e-mails -->
+    <section class="mt-8">
+      <div class="bg-white dark:bg-gray-900/70 backdrop-blur rounded-2xl shadow-soft border border-white/60 dark:border-white/10 p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-semibold text-gray-900 dark:text-white">📧 Múltiplos E-mails Detectados</h2>
+          <span class="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+            <i data-lucide="layers"></i>{{ multiple_emails|length }} e-mails encontrados
+          </span>
+        </div>
+        
+        <div class="space-y-6">
+          {% for email in multiple_emails %}
+          <div class="border border-gray-200 dark:border-gray-800 rounded-xl p-5 bg-gray-50/60 dark:bg-gray-950/40">
+            <div class="flex items-start justify-between mb-4">
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white">{{ email.id }}</h3>
+                {% if email.header %}
+                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">{{ email.header }}</p>
+                {% endif %}
+              </div>
+              <div class="flex items-center gap-3">
+                <!-- Categoria -->
+                {% if email.category == 'Produtivo' %}
+                  <span class="inline-flex items-center gap-2 text-sm px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300">
+                    <i data-lucide='check-circle'></i>{{ email.category }}
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-2 text-sm px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                    <i data-lucide='sparkles'></i>{{ email.category }}
+                  </span>
+                {% endif %}
+                
+                <!-- Confiança -->
+                <span class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {{ "%.0f"|format(email.confidence * 100) }}%
+                </span>
+              </div>
+            </div>
+            
+            <!-- Preview do conteúdo -->
+            <div class="bg-white dark:bg-gray-900 rounded-lg p-3 mb-3">
+              <p class="text-sm text-gray-700 dark:text-gray-300">{{ email.content_preview }}</p>
+            </div>
+            
+            <!-- Informações adicionais -->
+            <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <div class="flex items-center gap-4">
+                {% if email.sub_intent %}
+                  <span>Sub-intenção: {{ email.sub_intent }}</span>
+                {% endif %}
+                {% if email.signals %}
+                  <span>Sinais: {{ ', '.join(email.signals[:2]) }}{% if email.signals|length > 2 %}...{% endif %}</span>
+                {% endif %}
+              </div>
+              
+              <!-- Barra de confiança -->
+              <div class="flex items-center gap-2">
+                <span>Confiança:</span>
+                <div class="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div class="h-1.5 rounded-full bg-brand-600" data-pct="{{ (email.confidence * 100)|int }}"></div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Expandir conteúdo completo -->
+            <details class="mt-3">
+              <summary class="cursor-pointer text-xs text-brand-600 dark:text-brand-400 hover:underline">Ver conteúdo completo</summary>
+              <div class="mt-2 p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800">
+                <pre class="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">{{ email.content_full }}</pre>
+              </div>
+            </details>
+          </div>
+          {% endfor %}
+        </div>
+        
+        <!-- Resumo -->
+        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-950/40 rounded-xl border border-blue-200 dark:border-blue-900">
+          <h4 class="font-semibold text-blue-900 dark:text-blue-100 mb-2">📊 Resumo da Análise</h4>
+          <div class="grid md:grid-cols-3 gap-4 text-sm">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-green-600 dark:text-green-400">
+                {{ multiple_emails|selectattr('category', 'equalto', 'Produtivo')|list|length }}
+              </div>
+              <div class="text-green-700 dark:text-green-300">Produtivos</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-gray-600 dark:text-gray-400">
+                {{ multiple_emails|selectattr('category', 'equalto', 'Improdutivo')|list|length }}
+              </div>
+              <div class="text-gray-700 dark:text-gray-300">Improdutivos</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {{ multiple_emails|length }}
+              </div>
+              <div class="text-blue-700 dark:text-blue-300">Total</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <details class="mt-6 bg-white dark:bg-gray-900/70 backdrop-blur rounded-2xl shadow-soft border border-white/60 dark:border-white/10 p-6">
+      <summary class="cursor-pointer text-sm text-gray-600 dark:text-gray-300">Texto original completo</summary>
+      <pre class="mt-3 whitespace-pre-wrap text-gray-600 dark:text-gray-300">{{ input_text }}</pre>
+    </details>
+    
+    {% elif category %}
     <section class="mt-8 grid lg:grid-cols-3 gap-6">
       <!-- Resultado -->
       <div class="lg:col-span-1 bg-white dark:bg-gray-900/70 backdrop-blur rounded-2xl shadow-soft border border-white/60 dark:border-white/10 p-6">

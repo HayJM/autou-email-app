@@ -16,7 +16,7 @@ No final do dia, **vamos avaliar sua capacidade de resolver o problema** de verd
 
 ## 🎯 Solução Implementada
 
-Aplicação web para classificação automática de e-mails em **Produtivo** ou **Improdutivo** com geração de respostas sugeridas.
+Aplicação web inteligente para classificação automática de e-mails (únicos ou múltiplos) em **Produtivo** ou **Improdutivo** com geração de respostas sugeridas e análise estatística.
 
 ![Flask](https://img.shields.io/badge/Flask-3.0.3-blue)
 ![Python](https://img.shields.io/badge/Python-3.12-green)
@@ -37,6 +37,24 @@ Aplicação web para classificação automática de e-mails em **Produtivo** ou 
 3. Clique em "Processar" 
 4. Visualize a classificação e resposta sugerida
 
+### **📄 Testando com Múltiplos E-mails**
+A aplicação detecta automaticamente arquivos com vários e-mails:
+- Formato suportado: `EMAIL 1 - PRODUTIVO`, `EMAIL 2 - IMPRODUTIVO`, etc.
+- Também detecta e-mails separados por cabeçalhos `De:`, `From:`, `Assunto:`
+- Crie um arquivo .txt com múltiplos e-mails para testar a funcionalidade
+
+### **🔌 API REST**
+```bash
+# E-mail único
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"text":"Preciso do status do chamado #123"}' \
+  https://autou-email-app.onrender.com/api/classify
+
+# Múltiplos e-mails via arquivo
+curl -X POST -F "file=@seus_emails.txt" \
+  https://autou-email-app.onrender.com/api/classify
+```
+
 ### **Local**
 ```bash
 # Clone e execute
@@ -52,10 +70,12 @@ Acesse: http://localhost:5000
 ## ⚡ Funcionalidades
 
 - ✅ **Classificação IA**: Produtivo vs Improdutivo
+- ✅ **Múltiplos e-mails**: Detecta e classifica vários e-mails em um arquivo
 - ✅ **Upload de arquivos**: PDF e TXT suportados
 - ✅ **API REST**: Endpoint `/api/classify` com Swagger
 - ✅ **Interface moderna**: Dark mode, drag-drop, responsive
 - ✅ **Respostas automáticas**: Sugestões contextuais
+- ✅ **Análise em lote**: Resumo estatístico para múltiplos e-mails
 
 ---
 
@@ -83,6 +103,47 @@ Acesse: http://localhost:5000
 - **Aplicação**: https://autou-email-app.onrender.com/
 - **Repositório**: https://github.com/HayJM/autou-email-app
 - **API**: https://autou-email-app.onrender.com/apidocs/
+
+---
+
+## 📁 Estrutura do Projeto
+
+```
+autou-email-app/
+├── app.py                 # Aplicação Flask principal
+├── nlp.py                 # Processamento de linguagem natural
+├── responders.py          # Geração de respostas
+├── requirements.txt       # Dependências Python
+├── templates/
+│   └── index.html        # Interface web moderna
+├── static/
+│   └── styles.css        # Estilos CSS customizados
+├── Dockerfile            # Container Docker
+├── Procfile              # Deploy Heroku/Render
+└── README.md             # Este arquivo
+```
+
+## 🧪 Como Testar Múltiplos E-mails
+
+Para testar a funcionalidade de múltiplos e-mails, crie um arquivo de texto com o formato:
+
+```
+EMAIL 1 - PRODUTIVO
+De: cliente@empresa.com
+Assunto: Problema urgente no sistema
+
+Prezados, estamos com problema crítico no sistema...
+
+EMAIL 2 - IMPRODUTIVO  
+De: marketing@loja.com
+Assunto: Promoção especial 50% OFF
+
+Não perca nossa mega promoção...
+```
+
+### Tipos detectados automaticamente:
+✅ **Produtivos**: Problemas técnicos, reuniões importantes, bugs críticos  
+❌ **Improdutivos**: Spam, newsletters, felicitações
 
 ---
 

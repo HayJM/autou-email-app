@@ -162,6 +162,72 @@ def heuristic_classifier(pre: str):
         return 'Improdutivo', 0.55
 
 
+def split_emails(text: str) -> List[Dict[str, str]]:
+    """
+    Detecta e separa múltiplos e-mails em um texto
+    """
+    emails = []
+    
+    # Padrões para detectar início de e-mail
+    email_patterns = [
+        r'EMAIL \d+[\s\-]*(?:PRODUTIVO|IMPRODUTIVO)?',  # EMAIL 1 - PRODUTIVO
+        r'De:\s*\w+',  # De: usuario@email.com
+        r'From:\s*\w+',  # From: user@email.com
+        r'Assunto:|Subject:',  # Assunto: ou Subject:
+        r'Para:|To:',  # Para: ou To:
+        r'(?:^|\n)\s*(?:Prezados?|Olá|Caro|Dear|Hi)',  # Saudações no início
+    ]
+    
+    # Primeiro, tenta detectar e-mails marcados explicitamente (EMAIL 1, EMAIL 2, etc.)
+    explicit_pattern = r'EMAIL\s+(\d+)[\s\-]*([^\n]*?)\n([\s\S]*?)(?=EMAIL\s+\d+|$)'
+    explicit_matches = re.finditer(explicit_pattern, text, re.IGNORECASE | re.MULTILINE)
+    
+    for match in explicit_matches:
+        email_num = match.group(1)
+        email_header = match.group(2).strip()
+        email_content = match.group(3).strip()
+        
+        # Detectar categoria do cabeçalho
+        category_hint = None
+        if 'produtivo' in email_header.lower():
+            category_hint = 'Produtivo'
+        elif 'improdutivo' in email_header.lower():
+            category_hint = 'Improdutivo'
+            
+        emails.append({
+            'id': f'Email {email_num}',
+            'header': email_header,
+            'content': email_content,
+            'category_hint': category_hint
+        })
+    
+    # Se não encontrou e-mails explícitos, tenta detectar por padrões de cabeçalho
+    if not emails:
+        # Divide por linhas que começam com "De:", "From:", etc.
+        sections = re.split(r'\n(?=(?:De:|From:|Para:|To:|Assunto:|Subject:))', text)
+        
+        for i, section in enumerate(sections, 1):
+            section = section.strip()
+            if len(section) > 20:  # Evita seções muito pequenas
+                emails.append({
+                    'id': f'Email {i}',
+                    'header': '',
+                    'content': section,
+                    'category_hint': None
+                })
+    
+    # Se ainda não encontrou nada, considera como um único e-mail
+    if not emails:
+        emails.append({
+            'id': 'Email único',
+            'header': '',
+            'content': text.strip(),
+            'category_hint': None
+        })
+    
+    return emails
+
+
 def extract_text_from_file(filename: str, file_stream: io.BytesIO) -> str:
     """
     Extrai texto de arquivos .txt ou .pdf
@@ -210,3 +276,36 @@ def extract_text_from_file(filename: str, file_stream: io.BytesIO) -> str:
             
     except Exception as e:
         return f"Erro ao extrair texto: {str(e)}"
+
+
+def classify_multiple_emails(text: str) -> List[Dict]:
+    """
+    Classifica múltiplos e-mails encontrados no texto
+    """
+    emails = split_emails(text)
+    results = []
+    
+    for email_data in emails:
+        content = email_data['content']
+        if len(content.strip()) < 10:  # Pula conteúdo muito pequeno
+            continue
+            
+        # Classifica o e-mail individual
+        classification = classify_email(content)
+        
+        # Adiciona informações extras
+        result = {
+            'id': email_data['id'],
+            'header': email_data['header'],
+            'content_preview': content[:150] + '...' if len(content) > 150 else content,
+            'content_full': content,
+            'category': classification['category'],
+            'confidence': classification['confidence'],
+            'sub_intent': classification.get('sub_intent'),
+            'signals': classification.get('signals', []),
+            'category_hint': email_data['category_hint']
+        }
+        
+        results.append(result)
+    
+    return results
