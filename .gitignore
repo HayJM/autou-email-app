@@ -223,3 +223,33 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# ================================
+# AutoU Email App - Arquivos de Debug e Teste
+# ================================
+
+# Arquivos de debug específicos do projeto
+debug_*.py
+debug_detailed.py
+debug_split.py
+debug_regex.py
+debug_files.py
+debug_text_diff.py
+
+# Arquivos de teste específicos do projeto
+test_*.py
+test_complete.py
+test_split.py
+test_files.py
+test_api_conditions.py
+final_test.py
+
+# Arquivos de teste de demonstração
+teste_emails.txt
+teste_emails.pdf
+**/teste_*.*
+
+# Arquivos temporários de desenvolvimento
+scratch.py
+temp_*.py
+exemplo_*.py

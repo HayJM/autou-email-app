@@ -168,53 +168,59 @@ def split_emails(text: str) -> List[Dict[str, str]]:
     """
     emails = []
     
-    # Padrões para detectar início de e-mail
-    email_patterns = [
-        r'EMAIL \d+[\s\-]*(?:PRODUTIVO|IMPRODUTIVO)?',  # EMAIL 1 - PRODUTIVO
-        r'De:\s*\w+',  # De: usuario@email.com
-        r'From:\s*\w+',  # From: user@email.com
-        r'Assunto:|Subject:',  # Assunto: ou Subject:
-        r'Para:|To:',  # Para: ou To:
-        r'(?:^|\n)\s*(?:Prezados?|Olá|Caro|Dear|Hi)',  # Saudações no início
-    ]
-    
     # Primeiro, tenta detectar e-mails marcados explicitamente (EMAIL 1, EMAIL 2, etc.)
-    explicit_pattern = r'EMAIL\s+(\d+)[\s\-]*([^\n]*?)\n([\s\S]*?)(?=EMAIL\s+\d+|$)'
-    explicit_matches = re.finditer(explicit_pattern, text, re.IGNORECASE | re.MULTILINE)
+    # Padrão corrigido para capturar todo o conteúdo até o próximo EMAIL
+    explicit_pattern = r'EMAIL\s+(\d+)\s*[-–—]*\s*([^\n]*)\n((?:(?!EMAIL\s+\d+)[\s\S])*)'
+    matches = list(re.finditer(explicit_pattern, text, re.IGNORECASE | re.MULTILINE))
     
-    for match in explicit_matches:
-        email_num = match.group(1)
-        email_header = match.group(2).strip()
-        email_content = match.group(3).strip()
-        
-        # Detectar categoria do cabeçalho
-        category_hint = None
-        if 'produtivo' in email_header.lower():
-            category_hint = 'Produtivo'
-        elif 'improdutivo' in email_header.lower():
-            category_hint = 'Improdutivo'
+    if matches:
+        for match in matches:
+            email_num = match.group(1)
+            email_header = match.group(2).strip()
+            email_content = match.group(3).strip()
             
-        emails.append({
-            'id': f'Email {email_num}',
-            'header': email_header,
-            'content': email_content,
-            'category_hint': category_hint
-        })
-    
-    # Se não encontrou e-mails explícitos, tenta detectar por padrões de cabeçalho
-    if not emails:
+            # Detectar categoria do cabeçalho
+            category_hint = None
+            if 'produtivo' in email_header.lower():
+                category_hint = 'Produtivo'
+            elif 'improdutivo' in email_header.lower():
+                category_hint = 'Improdutivo'
+                
+            emails.append({
+                'id': f'Email {email_num}',
+                'header': email_header,
+                'content': email_content,
+                'category_hint': category_hint
+            })
+    else:
+        # Se não encontrou padrão EMAIL X, tenta detectar por cabeçalhos
         # Divide por linhas que começam com "De:", "From:", etc.
         sections = re.split(r'\n(?=(?:De:|From:|Para:|To:|Assunto:|Subject:))', text)
         
-        for i, section in enumerate(sections, 1):
-            section = section.strip()
-            if len(section) > 20:  # Evita seções muito pequenas
-                emails.append({
-                    'id': f'Email {i}',
-                    'header': '',
-                    'content': section,
-                    'category_hint': None
-                })
+        if len(sections) > 1:
+            for i, section in enumerate(sections, 1):
+                section = section.strip()
+                if len(section) > 20:  # Evita seções muito pequenas
+                    emails.append({
+                        'id': f'Email {i}',
+                        'header': '',
+                        'content': section,
+                        'category_hint': None
+                    })
+        else:
+            # Tenta uma abordagem mais simples: dividir por linhas em branco múltiplas
+            sections = re.split(r'\n\s*\n\s*\n', text)
+            
+            if len(sections) > 1:
+                for i, section in enumerate(sections, 1):
+                    section = section.strip()
+                    if len(section) > 50:  # Seções maiores para evitar fragmentos
+                        emails.append({
+                            'id': f'Email {i}',
+                            'header': '',
+                            'content': section,
+                            'category_hint': None
+                        })
     
     # Se ainda não encontrou nada, considera como um único e-mail
     if not emails:
@@ -242,13 +248,24 @@ def extract_text_from_file(filename: str, file_stream: io.BytesIO) -> str:
                 try:
                     file_stream.seek(0)
                     content = file_stream.read().decode(encoding)
-                    return normalize_text(content)
+                    
+                    # Verifica se é arquivo com múltiplos e-mails - preserva quebras de linha
+                    if 'EMAIL 1' in content.upper() or 'EMAIL 2' in content.upper() or content.count('De:') > 1 or content.count('From:') > 1:
+                        return content.strip()  # Só remove espaços do início/fim
+                    else:
+                        return normalize_text(content)  # Normaliza texto normal
+                        
                 except UnicodeDecodeError:
                     continue
             # Se nenhum encoding funcionou, usa errors='ignore'
             file_stream.seek(0)
             content = file_stream.read().decode('utf-8', errors='ignore')
-            return normalize_text(content)
+            
+            # Verifica se é arquivo com múltiplos e-mails - preserva quebras de linha
+            if 'EMAIL 1' in content.upper() or 'EMAIL 2' in content.upper() or content.count('De:') > 1 or content.count('From:') > 1:
+                return content.strip()  # Só remove espaços do início/fim
+            else:
+                return normalize_text(content)  # Normaliza texto normal
             
         elif filename.lower().endswith('.pdf'):
             # Para arquivos .pdf, usa pdfminer
@@ -256,7 +273,13 @@ def extract_text_from_file(filename: str, file_stream: io.BytesIO) -> str:
                 from pdfminer.high_level import extract_text
                 file_stream.seek(0)
                 text = extract_text(file_stream)
-                return normalize_text(text)
+                
+                # Verifica se é arquivo com múltiplos e-mails - preserva quebras de linha
+                if 'EMAIL 1' in text.upper() or 'EMAIL 2' in text.upper() or text.count('De:') > 1 or text.count('From:') > 1:
+                    return text.strip()  # Só remove espaços do início/fim
+                else:
+                    return normalize_text(text)  # Normaliza texto normal
+                    
             except ImportError:
                 # Fallback para PyPDF2 se pdfminer não estiver disponível
                 try:
@@ -266,7 +289,12 @@ def extract_text_from_file(filename: str, file_stream: io.BytesIO) -> str:
                     text = ""
                     for page in pdf_reader.pages:
                         text += page.extract_text()
-                    return normalize_text(text)
+                    
+                    # Verifica se é arquivo com múltiplos e-mails - preserva quebras de linha
+                    if 'EMAIL 1' in text.upper() or 'EMAIL 2' in text.upper() or text.count('De:') > 1 or text.count('From:') > 1:
+                        return text.strip()  # Só remove espaços do início/fim
+                    else:
+                        return normalize_text(text)  # Normaliza texto normal
                 except ImportError:
                     return "Erro: Biblioteca para leitura de PDF não encontrada"
             except Exception as e:
@@ -293,6 +321,11 @@ def classify_multiple_emails(text: str) -> List[Dict]:
         # Classifica o e-mail individual
         classification = classify_email(content)
         
+        # Gera resposta sugerida para o e-mail individual
+        from responders import suggest_reply
+        import os
+        reply = suggest_reply(content, classification['category'], classification.get('sub_intent'), backend=os.getenv("MODEL_BACKEND", "local"))
+        
         # Adiciona informações extras
         result = {
             'id': email_data['id'],
@@ -303,7 +336,8 @@ def classify_multiple_emails(text: str) -> List[Dict]:
             'confidence': classification['confidence'],
             'sub_intent': classification.get('sub_intent'),
             'signals': classification.get('signals', []),
-            'category_hint': email_data['category_hint']
+            'category_hint': email_data['category_hint'],
+            'reply': reply
         }
         
         results.append(result)

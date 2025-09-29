@@ -157,6 +157,22 @@
               <p class="text-sm text-gray-700 dark:text-gray-300">{{ email.content_preview }}</p>
             </div>
             
+            <!-- Resposta sugerida -->
+            {% if email.reply %}
+            <div class="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-3">
+              <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="message-circle" class="w-4 h-4 text-blue-600 dark:text-blue-400"></i>
+                <span class="text-sm font-medium text-blue-900 dark:text-blue-100">Resposta Sugerida</span>
+              </div>
+              <p class="text-sm text-blue-800 dark:text-blue-200">{{ email.reply }}</p>
+              <button class="mt-2 inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline copy-reply-btn" 
+                      data-reply="{{ email.reply|e }}">
+                <i class="w-3 h-3" data-lucide="copy"></i>
+                Copiar resposta
+              </button>
+            </div>
+            {% endif %}
+            
             <!-- Informações adicionais -->
             <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <div class="flex items-center gap-4">
@@ -338,6 +354,24 @@
     const form = document.getElementById('emailForm');
     form?.addEventListener('submit', () => {
       document.getElementById('loading')?.classList.remove('hidden');
+    });
+
+    // botões de copiar resposta individual
+    document.querySelectorAll('.copy-reply-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const reply = btn.getAttribute('data-reply');
+        try {
+          await navigator.clipboard.writeText(reply);
+          btn.innerHTML = '<i class="w-3 h-3" data-lucide="check"></i> Copiado';
+          lucide.createIcons();
+          setTimeout(() => {
+            btn.innerHTML = '<i class="w-3 h-3" data-lucide="copy"></i> Copiar resposta';
+            lucide.createIcons();
+          }, 1500);
+        } catch {
+          alert('Não foi possível copiar a resposta.');
+        }
+      });
     });
 
     // Ajusta barras de confiança (evita Jinja dentro de style inline)
