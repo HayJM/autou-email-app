@@ -334,6 +334,36 @@
       catch { alert('Permita acesso à área de transferência para usar este recurso.'); }
     });
 
+    // limpar formulário
+    document.getElementById('clearBtn')?.addEventListener('click', () => {
+      // Limpa o textarea
+      ta.value = '';
+      
+      // Limpa o input de arquivo
+      const fileInput = document.getElementById('fileInput');
+      if (fileInput) {
+        fileInput.value = '';
+      }
+      
+      // Remove o nome do arquivo exibido
+      const fileName = document.getElementById('fileName');
+      if (fileName) {
+        fileName.textContent = '';
+      }
+      
+      // Esconde os resultados se estiverem visíveis
+      const results = document.getElementById('results');
+      if (results) {
+        results.style.display = 'none';
+      }
+      
+      // Atualiza o contador de caracteres
+      updateCount();
+      
+      // Foca no textarea
+      ta.focus();
+    });
+
     // drag & drop + exibir nome do arquivo
     const dz = document.getElementById('dropzone');
     const fi = document.getElementById('fileInput');
